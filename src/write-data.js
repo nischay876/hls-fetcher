@@ -18,12 +18,10 @@ axiosRetry(axios, {
   }
 });
 
-const writeFile = function(file, content) {
-  return mkdirp(path.dirname(file)).then(function() {
-    return fs.writeFileAsync(file, content);
-  }).then(function() {
-    // Removed individual file completion logs for better performance
-  });
+const writeFile = async function(file, content) {
+  // Handle mkdirp v3+ API properly
+  await mkdirp(path.dirname(file));
+  return fs.writeFileAsync(file, content);
 };
 
 const requestFile = function(uri) {
@@ -68,37 +66,31 @@ const WriteData = function(decrypt, concurrency, resources) {
 
   resources.forEach(function(r) {
     if (r.content) {
-      operations.push(function() {
-        return writeFile(r.file, r.content).then(() => {
-          completed++;
-          if (completed % progressInterval === 0 || completed === total) {
-            console.log(`📊 Progress: ${completed}/${total} (${Math.round((completed/total)*100)}%)`);
-          }
-        });
+      operations.push(async function() {
+        await writeFile(r.file, r.content);
+        completed++;
+        if (completed % progressInterval === 0 || completed === total) {
+          console.log(`📊 Progress: ${completed}/${total} (${Math.round((completed/total)*100)}%)`);
+        }
       });
     } else if (r.uri && r.key && decrypt) {
-      operations.push(function() {
-        return requestFile(r.uri).then(function(content) {
-          return decryptFile(content, r.key);
-        }).then(function(content) {
-          return writeFile(r.file, content);
-        }).then(() => {
-          completed++;
-          if (completed % progressInterval === 0 || completed === total) {
-            console.log(`📊 Progress: ${completed}/${total} (${Math.round((completed/total)*100)}%)`);
-          }
-        });
+      operations.push(async function() {
+        const content = await requestFile(r.uri);
+        const decryptedContent = await decryptFile(content, r.key);
+        await writeFile(r.file, decryptedContent);
+        completed++;
+        if (completed % progressInterval === 0 || completed === total) {
+          console.log(`📊 Progress: ${completed}/${total} (${Math.round((completed/total)*100)}%)`);
+        }
       });
     } else if (r.uri && inProgress.indexOf(r.uri) === -1) {
-      operations.push(function() {
-        return requestFile(r.uri).then(function(content) {
-          return writeFile(r.file, content);
-        }).then(() => {
-          completed++;
-          if (completed % progressInterval === 0 || completed === total) {
-            console.log(`📊 Progress: ${completed}/${total} (${Math.round((completed/total)*100)}%)`);
-          }
-        });
+      operations.push(async function() {
+        const content = await requestFile(r.uri);
+        await writeFile(r.file, content);
+        completed++;
+        if (completed % progressInterval === 0 || completed === total) {
+          console.log(`📊 Progress: ${completed}/${total} (${Math.round((completed/total)*100)}%)`);
+        }
       });
       inProgress.push(r.uri);
     }

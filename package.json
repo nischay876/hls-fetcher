@@ -1,6 +1,6 @@
 {
   "name": "mux-hls-fetcher",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Fetch HLS segments from an m3u8 playlist - Optimized for Mux streams",
   "main": "src/index.js",
   "scripts": {
@@ -32,7 +32,7 @@
     "bluebird": "^3.7.2",
     "filenamify": "^4.3.0",
     "m3u8-parser": "^7.1.0",
-    "mkdirp": "^3.0.1",
+    "mkdirp": "^1.0.4",
     "mpd-parser": "^1.2.0",
     "axios": "^1.6.0",
     "axios-retry": "^3.9.1",
