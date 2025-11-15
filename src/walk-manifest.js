@@ -224,9 +224,9 @@ const walkPlaylist = function(options) {
       },
       visitedUrls = [],
       requestTimeout = 1500,
-      requestRetryMaxAttempts = 5,
+      requestRetryMaxAttempts = 3, // Reduced retries for speed
       dashPlaylist = null,
-      requestRetryDelay = 5000
+      requestRetryDelay = 1000 // Reduced delay for speed
     } = options;
 
     let resources = [];

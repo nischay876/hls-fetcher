@@ -12,8 +12,8 @@ const pessimist = require('pessimist')
   .default('o', './hls-fetcher')
   .describe('o', "output path (default:'./hls-fetcher')")
   .alias('c', 'concurrency')
-  .default('c', Infinity)
-  .describe('c', 'number of simultaneous fetches (default: Infinity)')
+  .default('c', 10) // Increased default concurrency
+  .describe('c', 'number of simultaneous fetches (default: 10)')
   .alias('d', 'decrypt')
   .default('d', false)
   .describe('d', 'decrypt and remove enryption from manifest (default: false)')
@@ -25,16 +25,21 @@ const startTime = Date.now();
 const options = {
   input: pessimist.i,
   output,
-  concurrency: pessimist.c,
+  concurrency: parseInt(pessimist.c),
   decrypt: pessimist.d
 };
 
+console.log(`Starting HLS fetcher...`);
+console.log(`Input: ${pessimist.i}`);
+console.log(`Output: ${output}`);
+console.log(`Concurrency: ${options.concurrency}`);
+console.log(`Decrypt: ${options.decrypt}`);
+
 start(options).then(function() {
   const timeTaken = ((Date.now() - startTime) / 1000).toFixed(2);
-
-  console.log('Operation completed successfully in', timeTaken, 'seconds.');
+  console.log('✅ Operation completed successfully in', timeTaken, 'seconds.');
   process.exit(0);
 }).catch(function(error) {
-  console.error('ERROR', error);
+  console.error('❌ ERROR:', error);
   process.exit(1);
 });

@@ -10,19 +10,20 @@ const writeFile = function(file, content) {
   return mkdirp(path.dirname(file)).then(function() {
     return fs.writeFileAsync(file, content);
   }).then(function() {
-    console.log('Finished: ' + path.relative('.', file));
+    // Removed individual file completion logs for better performance
   });
 };
 
 const requestFile = function(uri) {
   const options = {
     uri,
-    // 60 seconds timeout
-    timeout: 60000,
+    // Reduced timeout for better responsiveness
+    timeout: 30000,
     // treat all responses as a buffer
     encoding: null,
-    // retry 1s after on failure
-    retryDelay: 1000
+    // retry quickly
+    retryDelay: 500,
+    maxAttempts: 3
   };
 
   return new Promise(function(resolve, reject) {
@@ -56,11 +57,23 @@ const decryptFile = function(content, encryption) {
 const WriteData = function(decrypt, concurrency, resources) {
   const inProgress = [];
   const operations = [];
+  let completed = 0;
+  const total = resources.length;
+
+  // Show progress every 10%
+  const progressInterval = Math.max(1, Math.floor(total / 10));
+  
+  console.log(`🚀 Starting download of ${total} resources with concurrency ${concurrency}`);
 
   resources.forEach(function(r) {
     if (r.content) {
       operations.push(function() {
-        return writeFile(r.file, r.content);
+        return writeFile(r.file, r.content).then(() => {
+          completed++;
+          if (completed % progressInterval === 0 || completed === total) {
+            console.log(`📊 Progress: ${completed}/${total} (${Math.round((completed/total)*100)}%)`);
+          }
+        });
       });
     } else if (r.uri && r.key && decrypt) {
       operations.push(function() {
@@ -68,12 +81,22 @@ const WriteData = function(decrypt, concurrency, resources) {
           return decryptFile(content, r.key);
         }).then(function(content) {
           return writeFile(r.file, content);
+        }).then(() => {
+          completed++;
+          if (completed % progressInterval === 0 || completed === total) {
+            console.log(`📊 Progress: ${completed}/${total} (${Math.round((completed/total)*100)}%)`);
+          }
         });
       });
     } else if (r.uri && inProgress.indexOf(r.uri) === -1) {
       operations.push(function() {
         return requestFile(r.uri).then(function(content) {
           return writeFile(r.file, content);
+        }).then(() => {
+          completed++;
+          if (completed % progressInterval === 0 || completed === total) {
+            console.log(`📊 Progress: ${completed}/${total} (${Math.round((completed/total)*100)}%)`);
+          }
         });
       });
       inProgress.push(r.uri);
@@ -81,10 +104,13 @@ const WriteData = function(decrypt, concurrency, resources) {
   });
 
   return Promise.map(operations, function(o) {
-    return Promise.join(o());
-  }, {concurrency}).all(function(o) {
-    console.log('DONE!');
+    return o();
+  }, {concurrency}).then(function() {
+    console.log(`🎉 Download completed! Successfully processed ${total} resources.`);
     return Promise.resolve();
+  }).catch(function(error) {
+    console.error(`💥 Download failed with error:`, error);
+    throw error;
   });
 };
 
