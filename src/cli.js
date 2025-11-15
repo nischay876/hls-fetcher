@@ -11,14 +11,17 @@ const argv = yargs(hideBin(process.argv))
   .option('input', {
     alias: 'i',
     describe: 'uri to m3u8 (required)',
-    type: 'string',
-    demandOption: true
+    type: 'string'
   })
   .option('output', {
     alias: 'o',
     describe: "output path (default:'./hls-fetcher')",
-    type: 'string',
-    default: './hls-fetcher'
+    type: 'string'
+  })
+  .option('playback-id', {
+    alias: 'p',
+    describe: 'Mux playback ID (shortcut for https://stream.mux.com/{ID}.m3u8)',
+    type: 'string'
   })
   .option('concurrency', {
     alias: 'c',
@@ -35,18 +38,32 @@ const argv = yargs(hideBin(process.argv))
   .help()
   .argv;
 
-// Make output path
-const output = path.resolve(argv.output);
+// Handle playback ID shortcut
+let inputUrl, outputPath;
+if (argv.p) {
+  inputUrl = `https://stream.mux.com/${argv.p}.m3u8`;
+  outputPath = argv.o || `./${argv.p}`;
+  console.log(`🎬 Using Mux Playback ID: ${argv.p}`);
+} else if (argv.i) {
+  inputUrl = argv.i;
+  outputPath = argv.o || './hls-fetcher';
+} else {
+  console.error('❌ ERROR: Either -i/--input or -p/--playback-id is required');
+  process.exit(1);
+}
+
+// Make output path absolute
+const output = path.resolve(outputPath);
 const startTime = Date.now();
 const options = {
-  input: argv.input,
+  input: inputUrl,
   output,
   concurrency: argv.concurrency,
   decrypt: argv.decrypt
 };
 
 console.log(`🚀 Starting Mux HLS fetcher...`);
-console.log(`📥 Input: ${argv.input}`);
+console.log(`📥 Input: ${inputUrl}`);
 console.log(`📁 Output: ${output}`);
 console.log(`⚡ Concurrency: ${options.concurrency}`);
 console.log(`🔐 Decrypt: ${options.decrypt}`);
