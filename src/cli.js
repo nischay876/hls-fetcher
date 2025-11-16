@@ -46,7 +46,7 @@ if (argv.p) {
   console.log(`🎬 Using Mux Playback ID: ${argv.p}`);
 } else if (argv.i) {
   inputUrl = argv.i;
-  outputPath = argv.o || './hls-fetcher';
+  outputPath = argv.o || './mux-hls-fetcher';
 } else {
   console.error('❌ ERROR: Either -i/--input or -p/--playback-id is required');
   process.exit(1);
