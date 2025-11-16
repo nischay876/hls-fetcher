@@ -53,30 +53,29 @@ const decryptFile = function(content, encryption) {
   });
 };
 
-const renameRootManifest = async function(resources, outputPath) {
-  // Find the resource that is likely the root manifest (no parent and has content)
-  const rootResources = resources.filter(r => 
-    r.file && 
-    !r.parent && 
-    path.basename(r.file) !== 'master.m3u8' &&
-    (r.content || r.uri)
-  );
-  
-  for (const rootResource of rootResources) {
-    const oldPath = rootResource.file;
-    const newPath = path.join(path.dirname(oldPath), 'master.m3u8');
+const renameRootManifest = async function(outputPath) {
+  try {
+    // Get all files in the output directory
+    const files = fs.readdirSync(outputPath);
     
-    // Check if file exists before trying to rename
-    try {
-      if (fs.existsSync(oldPath)) {
-        await fs.renameAsync(oldPath, newPath);
-        rootResource.file = newPath;
-        console.log(`🔄 Renamed root manifest to: master.m3u8`);
-        break; // Only rename the first one found
-      }
-    } catch (err) {
-      console.warn(`⚠️  Could not rename root manifest: ${err.message}`);
+    // Look for .m3u8 files that are not in subdirectories and not already named master.m3u8
+    const m3u8Files = files.filter(file => 
+      path.extname(file) === '.m3u8' && 
+      file !== 'master.m3u8' &&
+      fs.statSync(path.join(outputPath, file)).isFile()
+    );
+    
+    // If we found exactly one .m3u8 file in the root, rename it to master.m3u8
+    if (m3u8Files.length === 1) {
+      const oldName = m3u8Files[0];
+      const oldPath = path.join(outputPath, oldName);
+      const newPath = path.join(outputPath, 'master.m3u8');
+      
+      fs.renameSync(oldPath, newPath);
+      console.log(`🔄 Renamed ${oldName} to master.m3u8`);
     }
+  } catch (err) {
+    console.warn(`⚠️  Could not rename root manifest: ${err.message}`);
   }
 };
 
@@ -126,9 +125,9 @@ const WriteData = function(decrypt, concurrency, resources, outputPath) {
   return Promise.map(operations, function(o) {
     return o();
   }, {concurrency}).then(async function() {
-    // Rename root manifest to master.m3u8 after all downloads complete
+    // Simple rename: find the .m3u8 file in root output dir and rename it to master.m3u8
     if (outputPath) {
-      await renameRootManifest(resources, outputPath);
+      renameRootManifest(outputPath);
     }
     
     console.log(`🎉 Download completed! Successfully processed ${total} resources.`);
