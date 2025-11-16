@@ -244,11 +244,10 @@ const walkPlaylist = function(options) {
 
     if (uri) {
       manifest.uri = uri;
-      // Name root manifest as master.m3u8
+      manifest.file = path.join(basedir, urlBasename(uri));
+      // Override: Always name the root manifest as master.m3u8
       if (!parent) {
         manifest.file = path.join(basedir, 'master.m3u8');
-      } else {
-        manifest.file = path.join(basedir, urlBasename(uri));
       }
     }
 
@@ -279,8 +278,10 @@ const walkPlaylist = function(options) {
       }
 
       existingManifest = visitedUrls[manifest.uri];
-    } else if (!parent) {
-      // This is the root manifest - ensure it's named master.m3u8
+    }
+
+    // Ensure root manifest is always named master.m3u8
+    if (!parent && uri) {
       manifest.file = path.join(basedir, 'master.m3u8');
     }
 
